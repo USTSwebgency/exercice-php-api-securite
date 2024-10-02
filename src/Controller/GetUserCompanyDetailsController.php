@@ -7,34 +7,41 @@ use App\Repository\CompanyRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
-use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
-
+use App\Service\UserTokenService;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 class GetUserCompanyDetailsController extends AbstractController
 {
-    private TokenStorageInterface $tokenStorage;
+    private UserTokenService $userTokenService;
     private CompanyRepository $companyRepository;
 
-    public function __construct(TokenStorageInterface $tokenStorage, CompanyRepository $companyRepository)
+    public function __construct(UserTokenService $userTokenService, CompanyRepository $companyRepository)
     {
-        $this->tokenStorage = $tokenStorage;
+        $this->userTokenService = $userTokenService;
         $this->companyRepository = $companyRepository;
     }
 
     public function __invoke(int $id): JsonResponse
     {
         // Récupérer l'utilisateur connecté
-        $user = $this->tokenStorage->getToken()->getUser();
+        $user = $this->userTokenService->getConnectedUser();
 
-        // Utiliser la méthode du repository pour récupérer la société si l'utilisateur y est associé
-        $company = $this->companyRepository->findOneByUserAndCompanyId($user, $id);
-
-        // Si la société n'existe pas ou si l'utilisateur n'est pas associer lever une exception 404
-        if (!$company) {
-            throw new NotFoundHttpException("Société non trouvée ou l'utilisateur n'est pas dans cette société.");
+        if (!$user) {
+            return new JsonResponse(['error' => 'Utilisateur non connecté.'], JsonResponse::HTTP_UNAUTHORIZED);
         }
 
-        // Transformer l'entité en DTO et retourner la réponse
+        $company = $this->companyRepository->findOneByUserAndCompanyId($user, $id);
+
+        if (!$company) {
+            throw new NotFoundHttpException("Société non trouvée");
+        }
+
+        // Vérifier si l'utilisateur a le droit de voir les détails de la société
+        if (!$this->isGranted('view_company', $company)) {
+            throw new AccessDeniedException("Vous n'avez pas les droits pour voir les détails de cette société");
+        }
+
+        // Transformer l'entité en Dto et retourner la réponse
         $output = CompanyOutput::createFromEntity($company);
 
         return $this->json($output);

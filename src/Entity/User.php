@@ -2,10 +2,10 @@
 
 namespace App\Entity;
 
-
 use App\Repository\UserRepository;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Get;
+use App\Enum\Role;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\Metadata\Put;
 use ApiPlatform\Metadata\Delete;
@@ -16,40 +16,44 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use App\Dto\CompanyListOutput;
-use App\Dto\CompanyOutput; 
+use App\Dto\CompanyOutput;
 use App\Controller\GetUserCompaniesController;
 use App\Controller\GetUserCompanyDetailsController;
 use App\Security\CompanyVoter;
-use App\Security\AppVoter;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
-
 #[ApiResource(
+
     operations: [
+
+        // Renvoie la liste de tous les users de la BDD
         new GetCollection(
-            name: 'get_users', // Nom de l'opération pour récupérer tous les utilisateurs
-            // security: "is_granted('')" /
+            name: 'get_users_emails',
+            uriTemplate: '/users',
+            normalizationContext: ['groups' => ['email_only']],
         ),
+
+        // Renvoie la liste de toutes les sociétés d'un user 
         new GetCollection(
             name: 'get_user_companies',
             uriTemplate: '/users/user/companies',
             controller: GetUserCompaniesController::class,
-            output: CompanyListOutput::class, 
-            // security: 'is_granted("view", object)',
+            output: CompanyListOutput::class,
         ),
+
+        // Renvoie les détails d'une société spécifique dont fait partie l'utilisateur
         new Get(
             name: 'get_user_company_details',
             uriTemplate: '/users/user/companies/{id}',
             controller: GetUserCompanyDetailsController::class,
             output: CompanyOutput::class,
-            // security: 'is_granted("view", object)',
         ),
     ],
+
     paginationEnabled: false,
 )]
-
-
 
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
@@ -59,16 +63,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?int $id = null;
 
     #[ORM\Column(length: 180, nullable: false)]
+    #[Groups(['email_only'])]
     private ?string $email = null;
 
     /**
-     * @var list<string> The user roles
+     * @var list<string> Les rôles de l'utilisateur
      */
     #[ORM\Column]
     private array $roles = [];
 
     /**
-     * @var string The hashed password
+     * @var string Le mot de passe haché
      */
     #[ORM\Column(nullable: false)]
     private ?string $password = null;
@@ -76,7 +81,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     /**
      * @var Collection<int, UserCompanyRole>
      */
-    #[ORM\OneToMany(targetEntity: UserCompanyRole::class, mappedBy: 'user', orphanRemoval: true, cascade: ['persist'])]
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: UserCompanyRole::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $userCompanyRoles;
 
     public function __construct()
@@ -97,12 +102,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setEmail(string $email): static
     {
         $this->email = $email;
-
         return $this;
     }
 
     /**
-     * A visual identifier that represents this user.
+     * Un identifiant visuel représentant cet utilisateur.
      *
      * @see UserInterface
      */
@@ -125,13 +129,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return array_unique($roles);
     }
 
+
     /**
      * @param list<string> $roles
      */
     public function setRoles(array $roles): static
     {
         $this->roles = array_unique($roles);
-
         return $this;
     }
 
@@ -146,7 +150,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setPassword(string $password): static
     {
         $this->password = $password;
-
         return $this;
     }
 
@@ -159,52 +162,49 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         // $this->plainPassword = null;
     }
 
-    /**
+    /*
+     * Retourne les rôles de l'utilisateur pour les entreprises.
      * @return Collection<int, UserCompanyRole>
      */
     public function getUserCompanyRoles(): Collection
     {
         return $this->userCompanyRoles;
     }
-    
-    // Lie un user à une company par l'attribution d'un role dans la company
+
+    // Lie un utilisateur à une entreprise en lui attribuant un role
     public function addUserCompanyRole(UserCompanyRole $userCompanyRole): static
     {
         if (!$this->userCompanyRoles->contains($userCompanyRole)) {
             $this->userCompanyRoles->add($userCompanyRole);
             $userCompanyRole->setUser($this);
         }
-
         return $this;
     }
 
-    // Retirer une association et aussi permettre de retirer un user quand on le voudra
+    // Retire une association entre utilisateur et entreprise
     public function removeUserCompanyRole(UserCompanyRole $userCompanyRole): static
     {
         if ($this->userCompanyRoles->removeElement($userCompanyRole)) {
-            // set the owning side to null (unless already changed)
             if ($userCompanyRole->getUser() === $this) {
                 $userCompanyRole->setUser(null);
             }
         }
-
         return $this;
     }
 
-    // Méthode pour récuperer le role d'un user dans une société
+    // Retourne le rôle de l'utilisateur dans une entreprise spécifique
     public function getRoleForCompany(Company $company): ?Role
     {
         foreach ($this->userCompanyRoles as $userCompanyRole) {
             if ($userCompanyRole->getCompany() === $company) {
-                return $userCompanyRole->getRole(); // Retourne l'énumération Role
+                return $userCompanyRole->getRole();
             }
         }
-    
-        return null;
+        return null; 
     }
-    
 
-    // Méthode pour récuperer la liste des sociétés auxquelles appartient un user
+
+    // Retourne la liste des entreprises associées à un utilisateur
     public function getCompanies(): Collection
     {
         $companies = new ArrayCollection();

@@ -2,7 +2,11 @@ api_platform:
     title: Exercice USTS
     version: 1.0.0
     formats:
-        jsonld: ['application/ld+json']
+        json:     ['application/json']
+        jsonld:   ['application/ld+json']
+        jsonapi:  ['application/vnd.api+json']
+        html:     ['text/html']
+        csv:      ['text/csv']
     docs_formats:
         jsonld: ['application/ld+json']
         jsonopenapi: ['application/vnd.openapi+json']
@@ -14,7 +18,7 @@ api_platform:
         extra_properties:
             standard_put: true
             rfc_7807_compliant_errors: true
-    keep_legacy_inflector: false
+    #keep_legacy_inflector: false
     use_symfony_listeners: true
     swagger:
         api_keys:

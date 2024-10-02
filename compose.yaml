@@ -7,7 +7,7 @@ services:
       MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
       MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
       # Run "composer require symfony/orm-pack" to install and configure Doctrine ORM
-      DATABASE_URL: mysql://${MYSQL_USER:-root}:${MYSQL_PASSWORD:-password}@database:3306/${MYSQL_DATABASE:-app}?serverVersion=${MYSQL_VERSION:-11.4.3-MariaDB}&charset=${MYSQL_CHARSET:-utf8}
+      DATABASE_URL: mysql://root:WjYyhucBPjLLOfMmqIHnudNoLYQgdMSX@junction.proxy.rlwy.net:10780/railway?serverVersion=8.0&charset=utf8
       # Run "composer require symfony/mercure-bundle" to install and configure the Mercure integration
       MERCURE_URL: ${CADDY_MERCURE_URL:-http://php/.well-known/mercure}
       MERCURE_PUBLIC_URL: ${CADDY_MERCURE_PUBLIC_URL:-https://${SERVER_NAME:-localhost}/.well-known/mercure}
@@ -36,19 +36,36 @@ services:
 ###> symfony/mercure-bundle ###
 ###< symfony/mercure-bundle ###
 
+
+
 ###> doctrine/doctrine-bundle ###
-  database:
-    image: mariadb:11.4.3
-    environment:
-      MARIADB_DATABASE: ${MYSQL_DATABASE:-app}
-      MARIADB_ROOT_PASSWORD: ${MYSQL_PASSWORD:-password}
-    healthcheck:
-      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
-      timeout: 5s
-      retries: 5
-      start_period: 60s
-    volumes:
-      - database_data:/var/lib/mysql:rw###< doctrine/doctrine-bundle ###
+#  database:
+#    image: mariadb:11.4.3
+#    environment:
+#       MARIADB_DATABASE: ${MYSQL_DATABASE:-app}
+#     MARIADB_ROOT_PASSWORD: ${MYSQL_PASSWORD:-password}
+#    healthcheck:
+#      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+#      timeout: 5s
+#      retries: 5
+#     start_period: 60s
+#    volumes:
+#      - database_data:/var/lib/mysql:rw###< doctrine/doctrine-bundle ###
+
+###> doctrine/doctrine-bundle ###
+#  database:
+#    image: mariadb:11.4.3
+#    environment:
+#       MARIADB_DATABASE: ${MYSQL_DATABASE:-app}
+#     MARIADB_ROOT_PASSWORD: ${MYSQL_PASSWORD:-password}
+#    healthcheck:
+#      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+#      timeout: 5s
+#      retries: 5
+#     start_period: 60s
+#    volumes:
+#      - database_data:/var/lib/mysql:rw###< doctrine/doctrine-bundle ###
+
 
 volumes:
   caddy_data:

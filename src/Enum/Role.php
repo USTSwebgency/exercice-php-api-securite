@@ -2,20 +2,16 @@
 
 namespace App\Enum;
 
-/**
- * L'énumération Role définit les différents rôles d'utilisateur disponibles dans l'application.
- */
+
+ // L'énumération Role définit les différents rôles d'utilisateur disponibles dans l'application.
+ 
 enum Role: string
 {
     case ADMIN = 'ROLE_ADMIN';
     case MANAGER = 'ROLE_MANAGER';
     case CONSULTANT = 'ROLE_CONSULTANT';
 
-    /**
-     * Retourne la liste de tous les rôles disponibles sous forme de tableau.
-     *
-     * @return array
-     */
+    // Retourne la liste de tous les rôles disponibles sous forme de tableau.
     public static function getAllRoles(): array
     {
         return [
@@ -31,11 +27,10 @@ enum Role: string
         return in_array($role, self::getAllRoles(), true);
     }
 
-    
     // Convertit un rôle sous forme de chaîne en instance de Role.
     public static function fromString(string $role): ?Role
     {
-        return self::tryFrom($role); // Essaie de retourner une instance de Role si possible
+        return self::tryFrom($role); 
     }
 
     /**
@@ -47,7 +42,4 @@ enum Role: string
     {
         return $this->value;
     }
-    
 }
-
-

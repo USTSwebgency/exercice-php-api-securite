@@ -3,6 +3,10 @@
 namespace App\Entity;
 
 use App\Controller\CreateProjectController;
+use App\Controller\UpdateProjectController;
+use App\Controller\GetProjectDetailsController;
+use App\Controller\GetCompanyProjectsController;
+use App\Controller\DeleteProjectController;
 use App\Enum\Role; 
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Get;
@@ -14,71 +18,76 @@ use App\Repository\ProjectRepository;
 use App\Dto\ProjectListOutput;
 use App\Dto\ProjectDetailsOutput; 
 use App\Dto\ProjectInput;
-use App\Security\AppVoter;
 use ApiPlatform\Core\Annotation\ApiProperty;
 use ApiPlatform\Metadata\Link;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: ProjectRepository::class)]
 #[ApiResource(
+
     operations: [
-        // Récupérer tous les projets d'une entreprise
+
+        // Renvoie la liste des projets d'une entreprise
         new GetCollection(
             name: 'company_projects',
             uriTemplate: '/companies/{companyId}/projects',
             uriVariables: [
                 'companyId' => new Link(
                     fromClass: Company::class, 
-                    toProperty: 'company'      
+                    fromProperty: 'projects'     
                 ),
             ],
+            controller: GetCompanyProjectsController::class,
             output: ProjectListOutput::class,
-        //   security: 'is_granted("view", object)',
         ),
 
-        // Récupérer un projet spécifique d'une entreprise
+        // Renvoi les détails d'un projet d'une entreprise
         new Get(
+            read: false,
             name: 'get_company_project',
             uriTemplate: '/companies/{companyId}/projects/{id}',
             uriVariables: [
                 'companyId' => new Link(
                     fromClass: Company::class, 
-                    toProperty: 'company'      
+                    fromProperty: 'projects'     
                 ),
             ],
-            output: ProjectDetailsOutput::class,
-            security: 'is_granted("view", object)'
-        
+            controller: GetProjectDetailsController::class,
+            output: ProjectDetailsOutput::class
         ),
 
-        // Créer un nouveau projet au sein d'une entreprise
+        // Crée un nouveau projet pour une entreprise
         new Post(
+            read: false,
             uriTemplate: '/companies/{companyId}/projects',
             input: ProjectInput::class,
+            controller: CreateProjectController::class,
             uriVariables: [
                 'companyId' => new Link(
-                    fromClass: Company::class, 
-                    toProperty: 'company'      
+                    fromClass: Company::class,
+                    fromProperty: 'projects' 
                 ),
             ],
-            //security: 'is_granted("create", object)', 
         ),
-
-        // Mettre à jour un projet existant
+        
+        // Met à jour un projet existant dans une entreprise
         new Put(
+            read: false,
             uriTemplate: '/companies/{companyId}/projects/{id}',
             input: ProjectInput::class,
+            controller: UpdateProjectController::class,
             uriVariables: [
                 'companyId' => new Link(
                     fromClass: Company::class, 
                     toProperty: 'company'      
                 ),
             ],
-            //security: 'is_granted("edit", object)', 
         ),
 
-        // Supprimer un projet
-       /* new Delete(
+        // Supprime un projet d'une entreprise
+        new Delete(
+            read: false,
+            controller: DeleteProjectController::class,
             uriTemplate: '/companies/{companyId}/projects/{id}',
             uriVariables: [
                 'companyId' => new Link(
@@ -86,8 +95,7 @@ use Doctrine\ORM\Mapping as ORM;
                     toProperty: 'company'    
                 ),
             ],
-            security: 'is_granted("delete", object)', 
-        ),*/
+        )
 
     ]
 )]
@@ -112,14 +120,14 @@ class Project
     #[ORM\JoinColumn(nullable: false)]
     private ?Company $company = null;
 
-    /* Il est bon de définir une date de création non modififiable et de 
-    permettre l'association du projet à son entreprise lors de son initialisation */
-
+    /* Un projet doit etre obligatoirement lié à la société du user qui crée le projet 
+    Plus une date de création */
     public function __construct(Company $company)
     {
         $this->createdAt = new \DateTimeImmutable();
         $this->company = $company; 
     }
+    
 
     public function getId(): ?int
     {
@@ -158,7 +166,7 @@ class Project
         return $this->company;
     }
 
-    // Empêche la modification de la company
+    // La société ne peut pas être modifiée après la création du projet
     public function setCompany(?Company $company): static
     {
         if (null === $this->company) {

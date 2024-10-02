@@ -15,6 +15,7 @@ services:
       MERCURE_EXTRA_DIRECTIVES: demo
       # See https://xdebug.org/docs/all_settings#mode
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
+      DATABASE_URL: mysql://root:WjYyhucBPjLLOfMmqIHnudNoLYQgdMSX@junction.proxy.rlwy.net:10780/railway?serverVersion=8.0&charset=utf8
     extra_hosts:
       # Ensure that host.docker.internal is correctly defined on Linux
       - host.docker.internal:host-gateway
@@ -24,7 +25,7 @@ services:
 ###< symfony/mercure-bundle ###
 
 ###> doctrine/doctrine-bundle ###
-  database:
-    ports:
-      - "5432"
+#  database:
+#    ports:
+#      - "5432"
 ###< doctrine/doctrine-bundle ###

@@ -17,8 +17,27 @@ services:
         resource: '../src/'
         exclude:
             - '../src/DependencyInjection/'
-            - '../src/Entity/'
+            #- '../src/Entity/'
             - '../src/Kernel.php'
+
+
+    App\DataTransformer\ProjectInputToProjectDataTransformer:
+        tags: ['api_platform.data_transformer']
+
+    App\DataTransformer\ProjectInputToProjectUpdateDataTransformer:
+        tags: ['api_platform.data_transformer']
+
+    App\DataTransformer\AddUserToCompanyDataTransformer:
+        tags: ['api_platform.data_transformer']
+
+    App\Service\UserTokenService:
+        arguments:
+            $tokenStorage: '@security.token_storage'
+
+
+
+
+           
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

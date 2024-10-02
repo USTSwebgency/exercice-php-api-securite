@@ -13,7 +13,6 @@ use ApiPlatform\Metadata\Post;
 use ApiPlatform\Metadata\Put;
 use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\ApiResource;
-use App\Security\AppVoter;
 
 
 use Doctrine\ORM\Mapping as ORM;
@@ -35,6 +34,8 @@ use Doctrine\ORM\Mapping as ORM;
         ), */
     ]
 )]
+
+
 class Company
 {
     #[ORM\Id]
@@ -57,7 +58,7 @@ class Company
     /**
      * @var Collection<int, UserCompanyRole>
      */
-    #[ORM\OneToMany(targetEntity: UserCompanyRole::class, mappedBy: 'company',cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OneToMany(mappedBy: 'company', targetEntity: UserCompanyRole::class)]
     private Collection $userCompanyRoles;
 
     public function __construct()
@@ -107,7 +108,8 @@ class Company
         return $this;
     }
 
-    /**
+    /*
+     * Retourne la collection des projets liés à la société.
      * @return Collection<int, Project>
      */
 
@@ -116,6 +118,7 @@ class Company
         return $this->projects;
     }
 
+     // Ajoute un projet à la société
     public function addProject(Project $project): static
     {
         if(!$this->projects->contains($project)){
@@ -126,6 +129,7 @@ class Company
         return $this;
     }
 
+    // Retire un projet de la société
     public function removeProject(Project $project): static
     {
         if($this->projects->removeElement($project)){
@@ -135,7 +139,8 @@ class Company
         return $this;
     }
 
-    /**
+    /*
+     * Retourne les rôles des utilisateurs dans la société.
      * @return Collection<int, UserCompanyRole>
      */
     public function getUserCompanyRoles(): Collection
@@ -143,6 +148,7 @@ class Company
         return $this->userCompanyRoles;
     }
 
+    // Lie une société à un user par l'attribution d'un role
     public function addUserCompanyRole(UserCompanyRole $userCompanyRole): static
     {
         if (!$this->userCompanyRoles->contains($userCompanyRole)) {
@@ -152,20 +158,8 @@ class Company
 
         return $this;
     }
-    
- // Vérifie si l'utilisateur a un rôle spécifique dans la company
 
-    public function hasUser(User $user): bool
-    {
-        foreach ($this->userCompanyRoles as $userCompanyRole) {
-            if ($userCompanyRole->getUser() === $user) {
-                return true;
-            }
-        }
-        return false;
-    }
-    
-
+    // Retire une association entre utilisateur et entreprise
     public function removeUserCompanyRole(UserCompanyRole $userCompanyRole): static
     {
         if ($this->userCompanyRoles->removeElement($userCompanyRole)) {
@@ -178,9 +172,20 @@ class Company
         return $this;
     }
 
-    // A utiliser dans les voters
+
+    // Vérifie si l'utilisateur a un rôle dans la société
     public function isUserInCompany(User $user): bool
     {
-        return $this->hasUser($user); 
+        return $this->userCompanyRoles->exists(function($key, UserCompanyRole $userCompanyRole) use ($user) {
+            return $userCompanyRole->getUser() === $user;
+        });
+    }
+    
+    // Vérifie si l'utilisateur a un rôle spécifique dans la company
+    public function hasUser(User $user): bool
+    {
+        return $this->userCompanyRoles->exists(function($key, UserCompanyRole $userCompanyRole) use ($user) {
+            return $userCompanyRole->getUser() === $user;
+        });
     }
 }
