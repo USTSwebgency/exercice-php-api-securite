@@ -9,7 +9,11 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use App\Controller\GetUserCompaniesController;
 use App\Controller\GetUserCompanyDetailsController;
 use App\Service\UserTokenService;
-
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+use Symfony\Component\Security\Core\Exception\AuthenticationException;
 
 
 class GetUserCompaniesController extends AbstractController
@@ -27,21 +31,17 @@ class GetUserCompaniesController extends AbstractController
     {
         // Récupérer l'utilisateur connecté
         $user = $this->userTokenService->getConnectedUser();
-
-        if (!$user) {
-            return new JsonResponse(['error' => 'Utilisateur non connecté.'], JsonResponse::HTTP_UNAUTHORIZED);
-        }
         
         // Récupérer les sociétés de l'utilisateur
         $companies = $this->companyRepository->findCompaniesByUser($user);
 
         if (empty($companies)) {
-            return new JsonResponse(['message' => 'Pour le moment vous n\'etes affilié à aucune société'], JsonResponse::HTTP_OK);
+            return new JsonResponse(['message' => 'Pour le moment vous n\'etes affilié à aucune société'], JsonResponse::HTTP_NO_CONTENT);
         }
 
-        // Transformer chaque société en Dto pour le retour
+        // Transformer chaque société en DTO pour le retour
         $output = array_map(fn($company) => CompanyListOutput::createFromEntity($company), $companies);
 
         return $this->json($output);
     }
-}
+} 

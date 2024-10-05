@@ -4,9 +4,12 @@ namespace App\Repository;
 
 use App\Entity\Company;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Doctrine\Persistence\ManagerRegistry;
 use App\Entity\User;
 use App\Entity\UserCompanyRole;
+
 
 /**
  * @extends ServiceEntityRepository<Company>
@@ -18,33 +21,42 @@ class CompanyRepository extends ServiceEntityRepository
         parent::__construct($registry, Company::class);
     }
 
-    /**
-     * Récupère les sociétés associées à un utilisateur via la relation UserCompanyRole
-     */
+  // Retourne la liste des entreprises associées à un utilisateur
     public function findCompaniesByUser(User $user): array
     {
-        return $this->createQueryBuilder('c')
-            ->join('c.userCompanyRoles', 'ucr')
-            ->where('ucr.user = :user')
-            ->setParameter('user', $user)
-            ->getQuery()
-            ->getResult();
+        try {
+            return $this->createQueryBuilder('c')
+                ->join('c.userCompanyRoles', 'ucr')
+                ->where('ucr.user = :user')
+                ->setParameter('user', $user)
+                ->getQuery()
+                ->getResult();
+        } catch (\Exception $e) {
+            // Gérer l'exception ou la relancer
+            throw new \RuntimeException('Erreur lors de la récupération des entreprises pour l\'utilisateur : ' . $e->getMessage());
+        }
     }
 
-        /**
-     * Trouve une société par son ID via UserCompanyRole
-     */
-    public function findOneByUserAndCompanyId(User $user, int $companyId): ?Company
+
+    //Retourne les détails d'une société demandée par un user meme
+    public function findOneByUserAndCompanyId(User $user, int $companyId): Company
     {
-        return $this->createQueryBuilder('c')
+        $company = $this->createQueryBuilder('c')
             ->join('c.userCompanyRoles', 'ucr')
-            ->where('ucr.user = :user') 
-            ->andWhere('c.id = :companyId') 
+            ->where('ucr.user = :user')
+            ->andWhere('c.id = :companyId')
             ->setParameter('user', $user)
             ->setParameter('companyId', $companyId)
             ->getQuery()
-            ->getOneOrNullResult(); 
+            ->getOneOrNullResult();
+    
+        if (!$company) {
+            throw new NotFoundHttpException("Société non trouvée pour cet utilisateur.");
+        }
+    
+        return $company;
     }
+    
     
     
 

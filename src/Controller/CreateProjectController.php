@@ -13,7 +13,12 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
-
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class CreateProjectController extends AbstractController
 {
@@ -37,53 +42,54 @@ class CreateProjectController extends AbstractController
         $this->authChecker = $authChecker;
     }
 
-    public function __invoke(Request $request): JsonResponse
+    public function __invoke(Request $request, ValidatorInterface $validator): JsonResponse
     {
-        // Récupérer l'utilisateur qui s'authentifie
+        // Récupérer l'utilisateur connecté
         $user = $this->userTokenService->getConnectedUser();
-    
-        if (!$user) {
-            return new JsonResponse(['error' => 'Utilisateur non connecté.'], JsonResponse::HTTP_UNAUTHORIZED);
-        }
-    
-        // Récupérer l'id de la société depuis la requête
+        
+        // Récupérer l'ID de la société depuis la requête
         $companyId = $request->attributes->get('companyId');
-
         if (!$companyId) {
-            return new JsonResponse(['error' => 'L\'identifiant de la société est manquant.'], JsonResponse::HTTP_BAD_REQUEST);
+            throw new BadRequestHttpException("L'identifiant de la société est manquant.");
         }
     
         // Récupérer la société depuis le repository
         $company = $this->companyRepository->find($companyId);
-
-
-        if (!$company instanceof Company) {
-            return new JsonResponse(['error' => 'Société non trouvée.'], JsonResponse::HTTP_NOT_FOUND);
+        if (!$company) {
+            throw new NotFoundHttpException('Société non trouvée.');
         }
-    
-        // Verification des droits de création
+
+        // Vérification des droits de création du projet
         if (!$this->authChecker->isGranted('create_project', $company)) {
-            return new JsonResponse(['error' => 'Vous n\'êtes pas autorisé à créer un projet pour cette société.'], JsonResponse::HTTP_FORBIDDEN);
+            throw new AccessDeniedException("Vous n'êtes pas autorisé à créer un projet pour cette société.");
         }
         
         // Récupérer et valider les données de la requête
         $data = json_decode($request->getContent(), true);
-        
-        if (!isset($data['title'], $data['description'])) {
-            return new JsonResponse(['error' => 'Le titre et la description sont obligatoires.'], JsonResponse::HTTP_BAD_REQUEST);
-        }    
+
+        // Créer une instance de ProjectInput avec les données de la requête
+        $projectInput = new ProjectInput($data['title'], $data['description']);
+
+        // Valider le DTO
+        $errors = $validator->validate($projectInput);
+
+        // Si des erreurs sont détectées, les renvoyer dans la réponse
+        if (count($errors) > 0) {
+            $errorMessages = [];
+            foreach ($errors as $error) {
+                $errorMessages[] = $error->getMessage();
+            }
+            throw new BadRequestHttpException(implode(', ', $errorMessages));
+        }
         
         // Vérifier si un projet avec le même titre existe déjà pour cette société
         $existingProject = $this->entityManager->getRepository(Project::class)
             ->findOneBy(['title' => $data['title'], 'company' => $company]);
     
         if ($existingProject) {
-            return new JsonResponse(['error' => 'Un projet avec ce titre existe déjà pour votre société.'], JsonResponse::HTTP_CONFLICT);
+            throw new BadRequestHttpException("Un projet avec ce titre existe déjà pour votre société.");
         }
-        
-        // Créer une instance de ProjectInput avec les données de la requête
-        $projectInput = new ProjectInput($data['title'], $data['description']);
-    
+
         // Transformer les données d'entrée en entité Project
         $project = $this->transformer->transform($projectInput, $company);
     
@@ -96,6 +102,7 @@ class CreateProjectController extends AbstractController
             'id' => $project->getId(),
             'title' => $project->getTitle(),
             'description' => $project->getDescription(),
+            'company' => $company->getId(),
             'message' => 'Projet créé avec succès.'
         ], JsonResponse::HTTP_CREATED);
     }

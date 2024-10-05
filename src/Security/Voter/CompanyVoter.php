@@ -1,9 +1,8 @@
 <?php
-
 namespace App\Security\Voter;
 
 /* Voter pour gérer les permissions concernant l'ajout ou l'association d'un user dans une société 
-et la visualiation des détails d'une société spécifique */
+et la visualisation des détails d'une société spécifique */
 
 use App\Entity\Company;
 use App\Entity\User;
@@ -19,17 +18,17 @@ final class CompanyVoter extends Voter
 
     protected function supports(string $attribute, $subject): bool
     {
+        // Vérifie si l'attribut est bien pris en charge et que le sujet est une instance de Company
         return in_array($attribute, [self::VIEW, self::ADD_USER]) && $subject instanceof Company;
     }
 
-  
     protected function voteOnAttribute(string $attribute, $subject, TokenInterface $token): bool
     {
         // Récupération de l'utilisateur à partir du token
         $user = $token->getUser();
 
-        // Vérification si l'utilisateur est bien une instance de UserInterface
-        if (!$user instanceof UserInterface) {
+        // Vérification si l'utilisateur est bien une instance de User (pas seulement UserInterface)
+        if (!$user instanceof User) {
             return false; 
         }
 
@@ -39,6 +38,7 @@ final class CompanyVoter extends Voter
                 return $subject->isUserInCompany($user);
 
             case self::ADD_USER:
+                // Vérifie si l'utilisateur a les droits d'ajouter un autre utilisateur à la société
                 return $this->canAddUser($user, $subject);
         }
 
@@ -46,9 +46,9 @@ final class CompanyVoter extends Voter
     }
 
     // Vérifie si l'utilisateur est admin et peut effectuer l'ajout
-    private function canAddUser(UserInterface $user, Company $company): bool
+    private function canAddUser(User $user, Company $company): bool
     {
         $roleInCompany = $user->getRoleForCompany($company);
-        return $roleInCompany && $roleInCompany->value === Role::ADMIN->value;
+        return $roleInCompany === Role::ADMIN;
     }
 }

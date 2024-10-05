@@ -202,9 +202,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         }
         return null; 
     }
-
-
-    // Retourne la liste des entreprises associées à un utilisateur
+    
     public function getCompanies(): Collection
     {
         $companies = new ArrayCollection();

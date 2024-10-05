@@ -6,9 +6,9 @@ use App\Dto\CompanyOutput;
 use App\Repository\CompanyRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use App\Service\UserTokenService;
-use Symfony\Component\Security\Core\Exception\AccessDeniedException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 class GetUserCompanyDetailsController extends AbstractController
 {
@@ -26,22 +26,15 @@ class GetUserCompanyDetailsController extends AbstractController
         // Récupérer l'utilisateur connecté
         $user = $this->userTokenService->getConnectedUser();
 
-        if (!$user) {
-            return new JsonResponse(['error' => 'Utilisateur non connecté.'], JsonResponse::HTTP_UNAUTHORIZED);
-        }
-
+        // Récupérer la société associée à l'utilisateur
         $company = $this->companyRepository->findOneByUserAndCompanyId($user, $id);
 
-        if (!$company) {
-            throw new NotFoundHttpException("Société non trouvée");
-        }
-
         // Vérifier si l'utilisateur a le droit de voir les détails de la société
-        if (!$this->isGranted('view_company', $company)) {
-            throw new AccessDeniedException("Vous n'avez pas les droits pour voir les détails de cette société");
-        }
+       /* if (!$this->isGranted('view_company', $company)) {
+            throw new AccessDeniedHttpException("Vous n'avez pas les droits pour voir les détails de cette société.");
+        }*/
 
-        // Transformer l'entité en Dto et retourner la réponse
+        // Transformer l'entité en DTO et retourner la réponse
         $output = CompanyOutput::createFromEntity($company);
 
         return $this->json($output);

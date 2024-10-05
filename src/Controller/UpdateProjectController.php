@@ -11,9 +11,16 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use App\Service\UserTokenService;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
+
+
 
 class UpdateProjectController extends AbstractController
 {
@@ -37,37 +44,33 @@ class UpdateProjectController extends AbstractController
         $this->authChecker = $authChecker;
     }
 
-    public function __invoke(Request $request): JsonResponse
+    public function __invoke(Request $request, ValidatorInterface $validator): JsonResponse
     {
         $user = $this->userTokenService->getConnectedUser();
-
-        if (!$user) {
-            return new JsonResponse(['error' => 'Utilisateur non connecté.'], JsonResponse::HTTP_UNAUTHORIZED);
-        }
 
         $companyId = $request->attributes->get('companyId');
         $projectId = $request->attributes->get('id');
 
         // Vérification des paramètres requis
         if (!$companyId) {
-            return new JsonResponse(['error' => 'L\'identifiant de la société est manquant.'], JsonResponse::HTTP_BAD_REQUEST);
+            throw new BadRequestHttpException("L'identifiant de la société est manquant.");
         }
         if (!$projectId) {
-            return new JsonResponse(['error' => 'L\'identifiant du projet est manquant.'], JsonResponse::HTTP_BAD_REQUEST);
+            throw new BadRequestHttpException("L'identifiant du projet est manquant.");
         }
 
         $project = $this->entityManager->getRepository(Project::class)->find($projectId);
         if (!$project) {
-            return new JsonResponse(['error' => 'Projet non trouvé.'], JsonResponse::HTTP_NOT_FOUND);
+            throw new NotFoundHttpException("Projet non trouvé.");
         }
 
         $company = $this->companyRepository->find($companyId);
         if (!$company || $project->getCompany() !== $company) {
-            return new JsonResponse(['error' => 'Ce projet ne fait pas partie de votre société.'], JsonResponse::HTTP_FORBIDDEN);
+            throw new AccessDeniedHttpException("Ce projet ne fait pas partie de votre société.");
         }
 
         if (!$this->authChecker->isGranted('edit_project', $project)) {
-            throw new AccessDeniedException('Vous n\'êtes pas autorisé à modifier ce projet.');
+            throw new AccessDeniedException("Vous n'êtes pas autorisé à modifier ce projet.");
         }
 
         // Récupérer les données du corps de la requête
@@ -75,28 +78,41 @@ class UpdateProjectController extends AbstractController
         $projectInput = new ProjectInput(
             $input['title'] ?? null,
             $input['description'] ?? null
-        );
+        ); 
+        
+        // Valider le DTO
+        $errors = $validator->validate($projectInput);
 
-        // Vérification des données
-        if (empty($projectInput->title) || empty($projectInput->description)) {
-            return new JsonResponse(['error' => 'Titre et description sont obligatoires.'], JsonResponse::HTTP_BAD_REQUEST);
+        // Si des erreurs sont détectées, les renvoyer dans la réponse
+        if (count($errors) > 0) {
+            $errorMessages = [];
+            foreach ($errors as $error) {
+                $errorMessages[] = $error->getMessage();
+            }
+            throw new BadRequestHttpException(implode(', ', $errorMessages));
         }
 
-        // Appliquer les modifications au projet
-        $updatedProject = $this->transformer->transform($projectInput, $project);
-
-        // Sauvegarder les modifications
-        try {
-            $this->entityManager->flush();
-        } catch (\Exception $e) {
-            return new JsonResponse(['error' => 'Erreur lors de la sauvegarde: ' . $e->getMessage()], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+        // Vérifier si un projet avec le même titre existe déjà pour cette société
+        $existingProject = $this->entityManager->getRepository(Project::class)
+            ->findOneBy(['title' => $input['title'], 'company' => $company]);
+    
+        if ($existingProject) {
+            throw new BadRequestHttpException("Un projet avec ce titre existe déjà pour votre société.");
         }
 
-        return new JsonResponse([
-            'id' => $updatedProject->getId(),
-            'title' => $updatedProject->getTitle(),
-            'description' => $updatedProject->getDescription(),
-            'message' => 'Projet mis à jour avec succès.'
-        ], JsonResponse::HTTP_OK);
-    }
+      // Appliquer les modifications
+      $updatedProject = $this->transformer->transform($projectInput, $project);
+
+      // Sauvegarder les modifications en base de données
+      $this->entityManager->flush();
+
+      // Retourner une réponse JSON avec les informations du projet mis à jour
+      return new JsonResponse([
+          'id' => $updatedProject->getId(),
+          'title' => $updatedProject->getTitle(),
+          'description' => $updatedProject->getDescription(),
+          'message' => 'Projet mis à jour avec succès.'
+      ], JsonResponse::HTTP_OK);
+  }
+
 }

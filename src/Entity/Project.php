@@ -21,6 +21,7 @@ use App\Dto\ProjectInput;
 use ApiPlatform\Core\Annotation\ApiProperty;
 use ApiPlatform\Metadata\Link;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ProjectRepository::class)]
 #[ApiResource(
@@ -51,6 +52,10 @@ use Doctrine\ORM\Mapping as ORM;
                     fromClass: Company::class, 
                     fromProperty: 'projects'     
                 ),
+                'id' => new link(
+                    fromClass: Project::class,
+                    fromProperty: 'company'
+                )
             ],
             controller: GetProjectDetailsController::class,
             output: ProjectDetailsOutput::class
@@ -79,8 +84,12 @@ use Doctrine\ORM\Mapping as ORM;
             uriVariables: [
                 'companyId' => new Link(
                     fromClass: Company::class, 
-                    toProperty: 'company'      
+                    fromProperty: 'projects'      
                 ),
+                'id' => new link(
+                    fromClass: Project::class,
+                    fromProperty: 'company'
+                )
             ],
         ),
 
@@ -92,8 +101,12 @@ use Doctrine\ORM\Mapping as ORM;
             uriVariables: [
                 'companyId' => new Link(
                     fromClass: Company::class, 
-                    toProperty: 'company'    
+                    fromProperty: 'projects'    
                 ),
+                'id' => new link(
+                    fromClass: Project::class,
+                    fromProperty: 'company'
+                )
             ],
         )
 
@@ -108,9 +121,19 @@ class Project
     private ?int $id = null;
 
     #[ORM\Column(length: 255, nullable: false)]
+    #[Assert\NotBlank(message: 'Le titre est obligatoire.')]
+    #[Assert\Length(
+        max: 255,
+        maxMessage: 'Le titre ne peut pas dépasser {{ limit }} caractères.'
+    )]
     private ?string $title = null;
 
     #[ORM\Column(length: 255, nullable: false)]
+    #[Assert\NotBlank(message: 'La description est obligatoire.')]
+    #[Assert\Length(
+        max: 255,
+        maxMessage: 'La description ne peut pas dépasser {{ limit }} caractères.'
+    )]
     private ?string $description = null;
 
     #[ORM\Column(nullable: false)]
@@ -155,6 +178,13 @@ class Project
         $this->description = $description;
         return $this;
     }
+    
+    public function setCreatedAt(\DateTimeImmutable $createdAt): static
+    {
+        $this->createdAt = $createdAt;
+        return $this;
+    }
+    
 
     public function getCreatedAt(): ?\DateTimeImmutable
     {

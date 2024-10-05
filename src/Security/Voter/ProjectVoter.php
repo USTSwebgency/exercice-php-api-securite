@@ -3,8 +3,6 @@
 
 namespace App\Security\Voter;
 
-/* Votant pour gérer les permissions concernant les opérations sur les projets */
-
 use App\Entity\Company;
 use App\Entity\Project;
 use App\Entity\User;
@@ -23,7 +21,7 @@ final class ProjectVoter extends Voter
     protected function supports(string $attribute, $subject): bool
     {
         return in_array($attribute, [self::EDIT, self::VIEW, self::CREATE, self::DELETE])
-            && ($subject instanceof Project || $subject instanceof Company); 
+            && ($subject instanceof Project || $subject instanceof Company);
     }
 
     protected function voteOnAttribute(string $attribute, $subject, TokenInterface $token): bool
@@ -31,7 +29,7 @@ final class ProjectVoter extends Voter
         $user = $token->getUser();
 
         // Vérification si l'utilisateur est bien un User
-        if (!$user instanceof UserInterface) {
+        if (!$user instanceof User) {
             return false;
         }
 
@@ -52,7 +50,7 @@ final class ProjectVoter extends Voter
         // Vérification des permissions spécifiques à l'action demandée
         switch ($attribute) {
             case self::VIEW:
-                return $this->canView($user);
+                return $this->canView();
             case self::CREATE:
                 return $this->canCreate($user, $company);
             case self::EDIT:
@@ -65,29 +63,29 @@ final class ProjectVoter extends Voter
     }
 
     // Autorisation de visualisation (VIEW) : tous les utilisateurs dans la société peuvent voir les projets
-    private function canView(UserInterface $user): bool
+    private function canView(): bool
     {
         return true;
     }
 
     // Autorisation de création (CREATE) : seuls les admins et managers peuvent créer des projets
-    private function canCreate(UserInterface $user, Company $company): bool
+    private function canCreate(User $user, Company $company): bool
     {
         $roleInCompany = $user->getRoleForCompany($company);
-        return in_array($roleInCompany->value, [Role::ADMIN->value, Role::MANAGER->value], true);
+        return in_array($roleInCompany, [Role::ADMIN, Role::MANAGER], true);
     }
 
     // Autorisation d'édition (EDIT) : seuls les admins et managers peuvent éditer des projets
-    private function canEdit(UserInterface $user, Company $company): bool
+    private function canEdit(User $user, Company $company): bool
     {
         $roleInCompany = $user->getRoleForCompany($company);
-        return in_array($roleInCompany->value, [Role::ADMIN->value, Role::MANAGER->value], true);
+        return in_array($roleInCompany, [Role::ADMIN, Role::MANAGER], true);
     }
 
     // Autorisation de suppression (DELETE) : seuls les admins peuvent supprimer des projets
-    private function canDelete(UserInterface $user, Company $company): bool
+    private function canDelete(User $user, Company $company): bool
     {
         $roleInCompany = $user->getRoleForCompany($company);
-        return $roleInCompany->value === Role::ADMIN->value;
+        return $roleInCompany === Role::ADMIN;
     }
 }

@@ -11,6 +11,11 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+
 
 class DeleteProjectController extends AbstractController
 {
@@ -34,45 +39,33 @@ class DeleteProjectController extends AbstractController
     public function __invoke(Request $request): JsonResponse
     {
         $user = $this->userTokenService->getConnectedUser();
-    
-        if (!$user) {
-            return new JsonResponse(['error' => 'Utilisateur non connecté.'], JsonResponse::HTTP_UNAUTHORIZED);
-        }
+        
         $companyId = $request->attributes->get('companyId');
         $projectId = $request->attributes->get('id');
 
-        // Vérification des paramètres requis
-        if (!$companyId) {
-            return new JsonResponse(['error' => 'L\'identifiant de la société est manquant.'], JsonResponse::HTTP_BAD_REQUEST);
-        }
-        if (!$projectId) {
-            return new JsonResponse(['error' => 'L\'identifiant du projet est manquant.'], JsonResponse::HTTP_BAD_REQUEST);
+        if (!$companyId || !$projectId) {
+            throw new BadRequestHttpException("L'identifiant de la société ou du projet est manquant.");
         }
 
-        // Récupérer le projet et vérifier son existence
+        // Récupérer le projet
         $project = $this->entityManager->getRepository(Project::class)->find($projectId);
         if (!$project) {
-            return new JsonResponse(['error' => 'Projet non trouvé.'], JsonResponse::HTTP_NOT_FOUND);
+            throw new NotFoundHttpException('Projet non trouvé.');
         }
 
-        // Vérifier si la société existe et si le projet lui appartient
+        // Vérifier si la société existe et si le projet appartient à cette société
         $company = $this->companyRepository->find($companyId);
         if (!$company || $project->getCompany() !== $company) {
-            return new JsonResponse(['error' => 'Ce projet ne fait pas partie de votre société.'], JsonResponse::HTTP_FORBIDDEN);
+            throw new AccessDeniedHttpException('Ce projet ne fait pas partie de votre société.');
         }
 
-        // Vérification des droits de suppression 
+        // Vérifier les droits de suppression
         if (!$this->authChecker->isGranted('delete_project', $project)) {
             throw new AccessDeniedException('Vous n\'êtes pas autorisé à supprimer ce projet.');
         }
 
-        // Supprimer le projet
-        try {
-            $this->entityManager->remove($project);
-            $this->entityManager->flush();
-        } catch (\Exception $e) {
-            return new JsonResponse(['error' => 'Erreur lors de la suppression: ' . $e->getMessage()], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
-        }
+        $this->entityManager->remove($project);
+        $this->entityManager->flush();
 
         return new JsonResponse(['message' => 'Projet supprimé avec succès.'], JsonResponse::HTTP_NO_CONTENT);
     }

@@ -12,6 +12,11 @@ use Symfony\Component\HttpFoundation\Request;
 use App\Repository\CompanyRepository;
 use App\Service\UserTokenService;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+
 
 class GetProjectDetailsController extends AbstractController
 {
@@ -28,37 +33,28 @@ class GetProjectDetailsController extends AbstractController
 
     public function __invoke(Request $request, $companyId, $id): JsonResponse
     {
-        // Récupérer l'utilisateur connecté
         $user = $this->userTokenService->getConnectedUser();
 
-        if (!$user) {
-            return new JsonResponse(['error' => 'Utilisateur non connecté.'], JsonResponse::HTTP_UNAUTHORIZED);
-        }
-
-        // Vérifier que l'id de la société est valide
         $company = $this->companyRepository->find($companyId);
         if (!$company) {
-            return new JsonResponse(['error' => 'Société non trouvée.'], JsonResponse::HTTP_NOT_FOUND);
+            throw new NotFoundHttpException("Société non trouvée.");
         }
 
-        // Vérification des permissions 
+        // Vérification des droits
         if (!$this->isGranted('view_project', $company)) {
-            throw new AccessDeniedException('Vous n\'avez pas les droits pour voir les projets de cette société.');
+            throw new AccessDeniedException("Vous n'avez pas les droits pour voir les projets de cette société.");
         }
 
-        // Récupérer le projet spécifique dans la liste des projets de la société
+        // Récupérer le projet spécifique
         $project = $company->getProjects()->filter(fn(Project $p) => $p->getId() === (int)$id)->first();
-
         if (!$project) {
-            return new JsonResponse(['error' => 'Projet non trouvé pour votre société.'], JsonResponse::HTTP_NOT_FOUND);
+            throw new NotFoundHttpException("Projet non trouvé.");
         }
 
-        // Vérification des permissions pour visualiser ce projet
         if (!$this->isGranted('view_project', $project)) {
-            throw new AccessDeniedException('Vous n\'avez pas les droits pour voir les détails de ce projet.');
+            throw new AccessDeniedException("Vous n'avez pas les droits pour voir les détails de ce projet.");
         }
 
-        // Créer l'objet de sortie avec les détails du projet
         $output = ProjectDetailsOutput::createFromEntity($project);
         return new JsonResponse($output);
     }

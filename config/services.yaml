@@ -20,7 +20,6 @@ services:
             #- '../src/Entity/'
             - '../src/Kernel.php'
 
-
     App\DataTransformer\ProjectInputToProjectDataTransformer:
         tags: ['api_platform.data_transformer']
 
@@ -34,7 +33,9 @@ services:
         arguments:
             $tokenStorage: '@security.token_storage'
 
-
+    App\EventSubscriber\ExceptionSubscriber:
+        tags:
+            - { name: kernel.event_subscriber }
 
 
            

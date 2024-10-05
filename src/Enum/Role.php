@@ -15,12 +15,11 @@ enum Role: string
     public static function getAllRoles(): array
     {
         return [
-            self::ADMIN->value,
-            self::MANAGER->value,
-            self::CONSULTANT->value,
+            self::ADMIN,
+            self::MANAGER,
+            self::CONSULTANT,
         ];
     }
-
     // Vérifie si un rôle est valide
     public static function isValidRole(string $role): bool
     {

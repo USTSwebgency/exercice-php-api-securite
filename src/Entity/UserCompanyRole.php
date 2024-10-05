@@ -11,9 +11,7 @@ use App\Dto\AddUserToCompanyInput;
 use ApiPlatform\Metadata\Link;
 use App\Enum\Role;
 
-#[ORM\Table(name: 'user_company_role', uniqueConstraints: [
-    new ORM\UniqueConstraint(name: 'user_company_unique', columns: ['user_id', 'company_id'])
-])]
+#[ORM\UniqueConstraint(name: 'user_company_unique', columns: ['user_id', 'company_id'])]
 #[ORM\Entity(repositoryClass: UserCompanyRoleRepository::class)]
 #[ApiResource(
 
