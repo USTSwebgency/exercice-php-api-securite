@@ -59,28 +59,29 @@ class UpdateProjectController extends AbstractController
             throw new BadRequestHttpException("L'identifiant du projet est manquant.");
         }
 
+        $company = $this->companyRepository->find($companyId);
+        if (!$company->isUserInCompany($user)) {
+            throw new AccessDeniedHttpException("Vous n'êtes pas membre de cette société.");
+        }
+
+
         $project = $this->entityManager->getRepository(Project::class)->find($projectId);
         if (!$project) {
             throw new NotFoundHttpException("Projet non trouvé.");
         }
 
-        $company = $this->companyRepository->find($companyId);
-        if (!$company || $project->getCompany() !== $company) {
-            throw new AccessDeniedHttpException("Ce projet ne fait pas partie de votre société.");
-        }
 
         if (!$this->authChecker->isGranted('edit_project', $project)) {
             throw new AccessDeniedException("Vous n'êtes pas autorisé à modifier ce projet.");
         }
 
-        // Récupérer les données du corps de la requête
+        
         $input = $request->toArray();
         $projectInput = new ProjectInput(
             $input['title'] ?? null,
             $input['description'] ?? null
         ); 
         
-        // Valider le DTO
         $errors = $validator->validate($projectInput);
 
         // Si des erreurs sont détectées, les renvoyer dans la réponse
@@ -100,13 +101,11 @@ class UpdateProjectController extends AbstractController
             throw new BadRequestHttpException("Un projet avec ce titre existe déjà pour votre société.");
         }
 
-      // Appliquer les modifications
+   
       $updatedProject = $this->transformer->transform($projectInput, $project);
 
-      // Sauvegarder les modifications en base de données
       $this->entityManager->flush();
 
-      // Retourner une réponse JSON avec les informations du projet mis à jour
       return new JsonResponse([
           'id' => $updatedProject->getId(),
           'title' => $updatedProject->getTitle(),

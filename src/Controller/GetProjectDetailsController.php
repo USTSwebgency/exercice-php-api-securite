@@ -40,6 +40,10 @@ class GetProjectDetailsController extends AbstractController
             throw new NotFoundHttpException("Société non trouvée.");
         }
 
+        if (!$company->isUserInCompany($user)) {
+            throw new AccessDeniedHttpException("Vous n'êtes pas membre de cette société.");
+        }
+
         // Vérification des droits
         if (!$this->isGranted('view_project', $company)) {
             throw new AccessDeniedException("Vous n'avez pas les droits pour voir les projets de cette société.");

@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Tests\Security;
 
 use App\Entity\Company;
@@ -11,10 +10,10 @@ use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 
 class CompanyVoterTest extends TestCase
 {
-    private $voter;
-    private $token;
-    private $user;
-    private $company;
+    private CompanyVoter $voter;
+    private TokenInterface $token;
+    private User $user;
+    private Company $company;
 
     protected function setUp(): void
     {
@@ -27,17 +26,17 @@ class CompanyVoterTest extends TestCase
         $this->token->method('getUser')->willReturn($this->user);
     }
 
-    public function testViewCompanyGrantedIfUserIsInCompany(): void
+    public function testViewAccessGrantedIfUserIsInCompany(): void
     {
         // Simuler que l'utilisateur fait partie de la société
         $this->company->method('isUserInCompany')->with($this->user)->willReturn(true);
 
         $result = $this->voter->vote($this->token, $this->company, [CompanyVoter::VIEW]);
 
-        $this->assertEquals(CompanyVoter::ACCESS_GRANTED, $result, "L'utilisateur doit avoir accès à la société.");
+        $this->assertEquals(CompanyVoter::ACCESS_GRANTED, $result, "L'utilisateur doit avoir accès à la société s'il en fait partie.");
     }
 
-    public function testViewCompanyDeniedIfUserIsNotInCompany(): void
+    public function testViewAccessDeniedIfUserIsNotInCompany(): void
     {
         // Simuler que l'utilisateur ne fait pas partie de la société
         $this->company->method('isUserInCompany')->with($this->user)->willReturn(false);
@@ -47,7 +46,7 @@ class CompanyVoterTest extends TestCase
         $this->assertEquals(CompanyVoter::ACCESS_DENIED, $result, "L'utilisateur ne doit pas avoir accès à une société à laquelle il n'appartient pas.");
     }
 
-    public function testAddUserToCompanyGrantedIfUserIsAdmin(): void
+    public function testAddUserAccessGrantedIfUserIsAdmin(): void
     {
         // Simuler que l'utilisateur a le rôle ADMIN dans la société
         $this->user->method('getRoleForCompany')->with($this->company)->willReturn(Role::ADMIN);
@@ -57,23 +56,23 @@ class CompanyVoterTest extends TestCase
         $this->assertEquals(CompanyVoter::ACCESS_GRANTED, $result, "Un admin doit avoir le droit d'ajouter des utilisateurs à la société.");
     }
 
-    public function testAddUserToCompanyDeniedIfUserIsNotAdmin(): void
+    public function testAddUserAccessDeniedIfUserIsManager(): void
     {
-        // Simuler que l'utilisateur a un rôle autre que ADMIN (par exemple, MANAGER)
+        // Simuler que l'utilisateur a un rôle autre que ADMIN
         $this->user->method('getRoleForCompany')->with($this->company)->willReturn(Role::MANAGER);
 
         $result = $this->voter->vote($this->token, $this->company, [CompanyVoter::ADD_USER]);
 
-        $this->assertEquals(CompanyVoter::ACCESS_DENIED, $result, "Seul un admin doit pouvoir ajouter des utilisateurs à la société.");
+        $this->assertEquals(CompanyVoter::ACCESS_DENIED, $result, "Un manager ne doit pas avoir le droit d'ajouter des utilisateurs à la société.");
     }
 
-    public function testAddUserToCompanyDeniedIfUserIsNotInCompany(): void
+    public function testAddUserAccessDeniedIfUserIsNotInCompany(): void
     {
         // Simuler que l'utilisateur ne fait pas partie de la société
-        $this->user->method('getRoleForCompany')->with($this->company)->willReturn(null);
+        $this->company->method('isUserInCompany')->with($this->user)->willReturn(false);
 
         $result = $this->voter->vote($this->token, $this->company, [CompanyVoter::ADD_USER]);
 
-        $this->assertEquals(CompanyVoter::ACCESS_DENIED, $result, "Un utilisateur qui n'est pas dans la société ne doit pas pouvoir ajouter des utilisateurs.");
+        $this->assertEquals(CompanyVoter::ACCESS_DENIED, $result, "Un utilisateur qui ne fait pas partie de la société ne doit pas pouvoir ajouter des utilisateurs.");
     }
 }

@@ -23,8 +23,11 @@ class AddUserToCompanyDataTransformer
         $userCompanyRole = new UserCompanyRole();    
         $userCompanyRole->setUser($user);
         $userCompanyRole->setCompany($company);
-        $userCompanyRole->setRole(Role::fromString($input->role));
-
+        $role = Role::fromString($input->role);
+        if ($role === null) {
+            throw new \InvalidArgumentException("Le rôle spécifié est invalide.");
+        }
+        $userCompanyRole->setRole($role);
         return $userCompanyRole; 
     }
 }

@@ -44,12 +44,12 @@ class GetCompanyProjectDetailsTest extends ApiTestCase
 
     public function testGetCompanyProjectDetails()
     {
-        // Créer des utilisateurs
+      
         $admin = UserFactory::createOne();
         $consultant = UserFactory::createOne();
         $manager = UserFactory::createOne();
         $externalUser = UserFactory::createOne();
-        // Créer une société et un projet
+    
         $company = CompanyFactory::createOne();
         $project = ProjectFactory::createOne(['company' => $company]);
 
@@ -64,23 +64,25 @@ class GetCompanyProjectDetailsTest extends ApiTestCase
             'headers' => ['Authorization' => 'Bearer ' . $jwtToken],
         ]);
         $this->assertResponseStatusCodeSame(Response::HTTP_OK);
-        
         $responseData = json_decode($this->client->getResponse()->getContent(), true);
         $this->assertEquals($project->getTitle(), $responseData['title']);
         $this->assertEquals($project->getDescription(), $responseData['description']);
 
+        // Manager peut également voir
         $jwtToken = $this->login($manager);
         $this->client->request('GET', '/api/companies/' . $company->getId() . '/projects/' . $project->getId(), [
             'headers' => ['Authorization' => 'Bearer ' . $jwtToken],
         ]);
         $this->assertResponseStatusCodeSame(Response::HTTP_OK);
 
-        // Un consultant peut également voir les détails du projet
+        
+        // Consultant aussi
         $jwtToken = $this->login($consultant);
         $this->client->request('GET', '/api/companies/' . $company->getId() . '/projects/' . $project->getId(), [
             'headers' => ['Authorization' => 'Bearer ' . $jwtToken],
         ]);
         $this->assertResponseStatusCodeSame(Response::HTTP_OK);
+
 
         $jwtToken = $this->login($externalUser);
         $this->client->request('GET', '/api/companies/' . $company->getId() . '/projects/' . $project->getId(), [

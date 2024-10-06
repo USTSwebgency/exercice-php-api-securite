@@ -40,10 +40,13 @@ class GetCompanyProjectsController extends AbstractController
             throw new BadRequestHttpException("L'identifiant de la société est manquant.");
         }
 
-        // Récupérer la société
         $company = $this->companyRepository->find($companyId);
         if (!$company) {
             throw new NotFoundHttpException("Société non trouvée.");
+        }
+
+        if (!$company->isUserInCompany($user)) {
+            throw new AccessDeniedHttpException("Vous n'êtes pas membre de cette société.");
         }
 
         // Vérification des droits
@@ -51,7 +54,6 @@ class GetCompanyProjectsController extends AbstractController
             throw new AccessDeniedException("Vous n'avez pas les droits pour voir les projets de cette société.");
         }
 
-        // Récupérer les projets de la société
         $projects = $company->getProjects()->toArray();
 
         if (empty($projects)) {

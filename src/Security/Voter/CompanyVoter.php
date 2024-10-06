@@ -10,7 +10,6 @@ use App\Enum\Role;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;
 use Symfony\Component\Security\Core\User\UserInterface;
-
 final class CompanyVoter extends Voter
 {
     public const VIEW = 'view_company'; 
@@ -18,34 +17,28 @@ final class CompanyVoter extends Voter
 
     protected function supports(string $attribute, $subject): bool
     {
-        // Vérifie si l'attribut est bien pris en charge et que le sujet est une instance de Company
         return in_array($attribute, [self::VIEW, self::ADD_USER]) && $subject instanceof Company;
     }
 
     protected function voteOnAttribute(string $attribute, $subject, TokenInterface $token): bool
     {
-        // Récupération de l'utilisateur à partir du token
         $user = $token->getUser();
 
-        // Vérification si l'utilisateur est bien une instance de User (pas seulement UserInterface)
         if (!$user instanceof User) {
             return false; 
         }
 
         switch ($attribute) {
             case self::VIEW:
-                // Vérifie si l'utilisateur est membre de la société
                 return $subject->isUserInCompany($user);
 
             case self::ADD_USER:
-                // Vérifie si l'utilisateur a les droits d'ajouter un autre utilisateur à la société
                 return $this->canAddUser($user, $subject);
         }
 
         return false; 
     }
 
-    // Vérifie si l'utilisateur est admin et peut effectuer l'ajout
     private function canAddUser(User $user, Company $company): bool
     {
         $roleInCompany = $user->getRoleForCompany($company);

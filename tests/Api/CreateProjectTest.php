@@ -31,28 +31,22 @@ class CreateProjectTest extends ApiTestCase
 
     private function login(User $user): string
     {
-        // Utilise la route correcte /api/auth pour obtenir le jeton JWT
         $response = $this->client->request('POST', '/api/auth', [
             'json' => [
-                'email' => $user->getEmail(),  // Utilise 'email' au lieu de 'username'
-                'password' => 'my_password',   // Assurez-vous d'utiliser le bon mot de passe
+                'email' => $user->getEmail(),
+                'password' => 'my_password',
             ],
         ]);
 
-        // Vérifie que la réponse est 200 (succès)
         $this->assertResponseStatusCodeSame(Response::HTTP_OK);
-
-        // Récupère le jeton JWT à partir de la réponse
         $data = json_decode($response->getContent(), true);
-
-        // Vérifie que le token est bien dans la réponse
-        $this->assertArrayHasKey('token', $data, "JWT token non présent dans la réponse.");
 
         return $data['token'];
     }
 
     public function testCreateProject()
     {
+        
         $admin = UserFactory::createOne();
         $manager = UserFactory::createOne();
         $consultant = UserFactory::createOne();

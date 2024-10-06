@@ -50,6 +50,7 @@ class AddUserToCompanyTest extends ApiTestCase
         $externalUser = UserFactory::createOne();
         $manager = UserFactory::createOne();
         $consultant = UserFactory::createOne();
+        
 
         // Assigner des rôles
         UserCompanyRoleFactory::createOne(['user' => $admin, 'company' => $company, 'role' => Role::ADMIN]);
@@ -57,18 +58,17 @@ class AddUserToCompanyTest extends ApiTestCase
         UserCompanyRoleFactory::createOne(['user' => $manager, 'company' => $company, 'role' => Role::MANAGER]);
         UserCompanyRoleFactory::createOne(['user' => $consultant, 'company' => $company, 'role' => Role::CONSULTANT]);
 
+
         // L'admin peut ajouter un utilisateur à la société
         $jwtToken = $this->login($admin);
         $this->client->request('POST', '/api/companies/' . $company->getId() . '/users/' . $newUser->getId() . '/add_user', [
             'headers' => ['Authorization' => 'Bearer ' . $jwtToken],
-            'json' => ['role' => Role::CONSULTANT] // Exemple de rôle
+            'json' => ['role' => Role::CONSULTANT] 
         ]);
         $this->assertResponseStatusCodeSame(Response::HTTP_CREATED);
-        
-        // Vérifier que le nouvel utilisateur a été ajouté
         $this->assertTrue($company->isUserInCompany($newUser));
 
-        // Un utilisateur existant dans la société ne peut pas être ajouté à nouveau
+        
         $this->client->request('POST', '/api/companies/' . $company->getId() . '/users/' . $existingUser->getId() . '/add_user', [
             'headers' => ['Authorization' => 'Bearer ' . $jwtToken],
             'json' => ['role' => Role::CONSULTANT]
@@ -81,6 +81,7 @@ class AddUserToCompanyTest extends ApiTestCase
         ]);
         $this->assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
 
+
         // Simuler un utilisateur externe non autorisé
         $jwtToken = $this->login($externalUser);
         $this->client->request('POST', '/api/companies/' . $company->getId() . '/users/' . $newUser->getId() . '/add_user', [
@@ -88,6 +89,7 @@ class AddUserToCompanyTest extends ApiTestCase
             'json' => ['role' => Role::CONSULTANT]
         ]);
         $this->assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+
 
         // Vérifier qu'un manager ne peut pas ajouter un utilisateur
         $jwtToken = $this->login($manager);
@@ -97,6 +99,7 @@ class AddUserToCompanyTest extends ApiTestCase
         ]);
         $this->assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
 
+        
         // Vérifier qu'un consultant ne peut pas ajouter un utilisateur
         $jwtToken = $this->login($consultant);
         $this->client->request('POST', '/api/companies/' . $company->getId() . '/users/' . $newUser->getId() . '/add_user', [

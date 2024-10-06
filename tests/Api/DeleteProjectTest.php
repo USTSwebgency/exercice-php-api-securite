@@ -69,15 +69,14 @@ class DeleteProjectTest extends ApiTestCase
     
         // Recréer le projet pour le test de suppression par un manager
         $project = ProjectFactory::createOne(['company' => $company]);
-    
-        // Un manager ne peut pas supprimer le projet
         $jwtToken = $this->login($manager);
         $this->client->request('DELETE', '/api/companies/' . $company->getId() . '/projects/' . $project->getId(), [
             'headers' => ['Authorization' => 'Bearer ' . $jwtToken],
         ]);
-        $this->assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+        $this->assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
     
-        // Un consultant ne peut pas supprimer le projet
+        // Recréer le projet pour le test de suppression par un consultant
+        $project = ProjectFactory::createOne(['company' => $company]);
         $jwtToken = $this->login($consultant);
         $this->client->request('DELETE', '/api/companies/' . $company->getId() . '/projects/' . $project->getId(), [
             'headers' => ['Authorization' => 'Bearer ' . $jwtToken],

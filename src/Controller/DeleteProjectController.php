@@ -47,23 +47,20 @@ class DeleteProjectController extends AbstractController
             throw new BadRequestHttpException("L'identifiant de la société ou du projet est manquant.");
         }
 
-        // Récupérer le projet
+        $company = $this->companyRepository->find($companyId);
+        if (!$company->isUserInCompany($user)) {
+            throw new AccessDeniedHttpException("Vous n'êtes pas membre de cette société.");
+        }
+
         $project = $this->entityManager->getRepository(Project::class)->find($projectId);
         if (!$project) {
             throw new NotFoundHttpException('Projet non trouvé.');
         }
-
-        // Vérifier si la société existe et si le projet appartient à cette société
-        $company = $this->companyRepository->find($companyId);
-        if (!$company || $project->getCompany() !== $company) {
-            throw new AccessDeniedHttpException('Ce projet ne fait pas partie de votre société.');
-        }
-
-        // Vérifier les droits de suppression
+        
         if (!$this->authChecker->isGranted('delete_project', $project)) {
             throw new AccessDeniedException('Vous n\'êtes pas autorisé à supprimer ce projet.');
-        }
-
+        }        
+        
         $this->entityManager->remove($project);
         $this->entityManager->flush();
 

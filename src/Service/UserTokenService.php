@@ -18,15 +18,13 @@ class UserTokenService
 
     public function getConnectedUser(): UserInterface
     {
-        // Récupère le token JWT
+
         $token = $this->tokenStorage->getToken();
 
-        // Vérifie si le token existe et si l'utilisateur est connecté
         if (null === $token || !$token->getUser() instanceof UserInterface) {
             throw new UnauthorizedHttpException('Bearer', 'Utilisateur non connecté ou token invalide');
         }
 
-        // Récupère et retourne l'utilisateur à partir du token
         return $token->getUser();
     }
 

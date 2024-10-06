@@ -44,18 +44,17 @@ class GetCompanyProjectsTest extends ApiTestCase
 
     public function testGetCompanyProjects()
     {
-        // Créer des utilisateurs
+      
         $admin = UserFactory::createOne();
         $manager = UserFactory::createOne();
         $consultant = UserFactory::createOne();
         $externalUser = UserFactory::createOne();
 
-        // Créer une société et des projets
         $company = CompanyFactory::createOne();
         $project1 = ProjectFactory::createOne(['company' => $company]);
         $project2 = ProjectFactory::createOne(['company' => $company]);
 
-        // Assigner les rôles
+        
         UserCompanyRoleFactory::createOne(['user' => $admin, 'company' => $company, 'role' => Role::ADMIN]);
         UserCompanyRoleFactory::createOne(['user' => $manager, 'company' => $company, 'role' => Role::MANAGER]);
         UserCompanyRoleFactory::createOne(['user' => $consultant, 'company' => $company, 'role' => Role::CONSULTANT]);
@@ -66,10 +65,10 @@ class GetCompanyProjectsTest extends ApiTestCase
             'headers' => ['Authorization' => 'Bearer ' . $jwtToken],
         ]);
         $this->assertResponseStatusCodeSame(Response::HTTP_OK);
-        
         $responseData = json_decode($this->client->getResponse()->getContent(), true);
         $this->assertCount(2, $responseData);
 
+        
         // Un consultant peut également voir la liste des projets
         $jwtToken = $this->login($consultant);
         $this->client->request('GET', '/api/companies/' . $company->getId() . '/projects', [
@@ -77,14 +76,16 @@ class GetCompanyProjectsTest extends ApiTestCase
         ]);
         $this->assertResponseStatusCodeSame(Response::HTTP_OK);
 
-        // Un consultant peut également voir la liste des projets
+
+        // Manger peut également voir
         $jwtToken = $this->login($manager);
         $this->client->request('GET', '/api/companies/' . $company->getId() . '/projects', [
             'headers' => ['Authorization' => 'Bearer ' . $jwtToken],
         ]);
         $this->assertResponseStatusCodeSame(Response::HTTP_OK);   
+
         
-        // Un utilisateur qui ne fait pas partie de la société ne peut pas voir les projets (403 Forbidden)
+        // Un utilisateur qui ne fait pas partie de la société ne peut pas voir les projets 
         $jwtToken = $this->login($externalUser);
         $this->client->request('GET', '/api/companies/' . $company->getId() . '/projects', [
             'headers' => ['Authorization' => 'Bearer ' . $jwtToken],

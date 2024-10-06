@@ -32,7 +32,6 @@ class CompanyRepository extends ServiceEntityRepository
                 ->getQuery()
                 ->getResult();
         } catch (\Exception $e) {
-            // Gérer l'exception ou la relancer
             throw new \RuntimeException('Erreur lors de la récupération des entreprises pour l\'utilisateur : ' . $e->getMessage());
         }
     }
@@ -51,7 +50,7 @@ class CompanyRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
     
         if (!$company) {
-            throw new NotFoundHttpException("Société non trouvée pour cet utilisateur.");
+            throw new NotFoundHttpException("Société non trouvée, vous n'etes surement pas un membre.");
         }
     
         return $company;

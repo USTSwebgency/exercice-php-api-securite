@@ -44,19 +44,23 @@ class CreateProjectController extends AbstractController
 
     public function __invoke(Request $request, ValidatorInterface $validator): JsonResponse
     {
-        // Récupérer l'utilisateur connecté
+
         $user = $this->userTokenService->getConnectedUser();
         
-        // Récupérer l'ID de la société depuis la requête
+      
         $companyId = $request->attributes->get('companyId');
         if (!$companyId) {
             throw new BadRequestHttpException("L'identifiant de la société est manquant.");
         }
     
-        // Récupérer la société depuis le repository
+
         $company = $this->companyRepository->find($companyId);
         if (!$company) {
             throw new NotFoundHttpException('Société non trouvée.');
+        }
+
+        if (!$company->isUserInCompany($user)) {
+            throw new AccessDeniedHttpException("Vous n'êtes pas membre de cette société.");
         }
 
         // Vérification des droits de création du projet
@@ -64,16 +68,10 @@ class CreateProjectController extends AbstractController
             throw new AccessDeniedException("Vous n'êtes pas autorisé à créer un projet pour cette société.");
         }
         
-        // Récupérer et valider les données de la requête
         $data = json_decode($request->getContent(), true);
-
-        // Créer une instance de ProjectInput avec les données de la requête
         $projectInput = new ProjectInput($data['title'], $data['description']);
-
-        // Valider le DTO
         $errors = $validator->validate($projectInput);
 
-        // Si des erreurs sont détectées, les renvoyer dans la réponse
         if (count($errors) > 0) {
             $errorMessages = [];
             foreach ($errors as $error) {
@@ -82,7 +80,6 @@ class CreateProjectController extends AbstractController
             throw new BadRequestHttpException(implode(', ', $errorMessages));
         }
         
-        // Vérifier si un projet avec le même titre existe déjà pour cette société
         $existingProject = $this->entityManager->getRepository(Project::class)
             ->findOneBy(['title' => $data['title'], 'company' => $company]);
     
@@ -92,8 +89,8 @@ class CreateProjectController extends AbstractController
 
         // Transformer les données d'entrée en entité Project
         $project = $this->transformer->transform($projectInput, $company);
-    
-        // Ajouter le projet à la société et le persister
+
+
         $company->addProject($project);
         $this->entityManager->persist($project);
         $this->entityManager->flush();

@@ -28,12 +28,11 @@ final class ProjectVoter extends Voter
     {
         $user = $token->getUser();
 
-        // Vérification si l'utilisateur est bien un User
+    
         if (!$user instanceof User) {
             return false;
         }
 
-        // Déterminer la société liée au projet ou directement la société
         if ($subject instanceof Project) {
             $company = $subject->getCompany();
         } elseif ($subject instanceof Company) {
@@ -42,7 +41,6 @@ final class ProjectVoter extends Voter
             return false;
         }
 
-        // Vérification si l'utilisateur fait partie de la société
         if (!$company->isUserInCompany($user)) {
             return false;
         }
@@ -62,30 +60,26 @@ final class ProjectVoter extends Voter
         return false;
     }
 
-    // Autorisation de visualisation (VIEW) : tous les utilisateurs dans la société peuvent voir les projets
     private function canView(): bool
     {
         return true;
     }
 
-    // Autorisation de création (CREATE) : seuls les admins et managers peuvent créer des projets
     private function canCreate(User $user, Company $company): bool
     {
         $roleInCompany = $user->getRoleForCompany($company);
         return in_array($roleInCompany, [Role::ADMIN, Role::MANAGER], true);
     }
 
-    // Autorisation d'édition (EDIT) : seuls les admins et managers peuvent éditer des projets
     private function canEdit(User $user, Company $company): bool
     {
         $roleInCompany = $user->getRoleForCompany($company);
         return in_array($roleInCompany, [Role::ADMIN, Role::MANAGER], true);
     }
 
-    // Autorisation de suppression (DELETE) : seuls les admins peuvent supprimer des projets
     private function canDelete(User $user, Company $company): bool
     {
         $roleInCompany = $user->getRoleForCompany($company);
-        return $roleInCompany === Role::ADMIN;
+        return in_array($roleInCompany, [Role::ADMIN, Role::MANAGER], true);
     }
 }

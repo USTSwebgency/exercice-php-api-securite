@@ -55,8 +55,6 @@ class UserCompanyRole
     #[ORM\Column(type: 'string', enumType: Role::class, length: 255)]
     private Role $role;
 
-    // Getters and Setters
-
     public function getId(): ?int
     {
         return $this->id;

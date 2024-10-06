@@ -23,10 +23,9 @@ class GetUserCompanyDetailsController extends AbstractController
 
     public function __invoke(int $id): JsonResponse
     {
-        // Récupérer l'utilisateur connecté
+
         $user = $this->userTokenService->getConnectedUser();
 
-        // Récupérer la société associée à l'utilisateur
         $company = $this->companyRepository->findOneByUserAndCompanyId($user, $id);
 
         // Vérifier si l'utilisateur a le droit de voir les détails de la société
@@ -34,7 +33,6 @@ class GetUserCompanyDetailsController extends AbstractController
             throw new AccessDeniedHttpException("Vous n'avez pas les droits pour voir les détails de cette société.");
         }*/
 
-        // Transformer l'entité en DTO et retourner la réponse
         $output = CompanyOutput::createFromEntity($company);
 
         return $this->json($output);
